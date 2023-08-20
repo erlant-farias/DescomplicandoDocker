@@ -1,0 +1,184 @@
+Hostname:
+    hostname node1
+
+Criação da imagem:
+    docker image build -t toskeira:1.0 .
+    docker image build -t toskeira:1.0 . --no-cache
+    docker image build -t meugo:1.0 . 
+
+
+Volume do tipo bind:
+    docker container run -ti --mount type=bind,src=/opt/giropops,dst=/giropops debian
+    docker container create (cria o container mas não sobe)
+
+
+Criar volume:
+    docker volume create giropops
+    docker volume ls
+    docker volume inspect giropops
+    caminho: /var/lib/docker/volumes/
+
+
+Atachar:
+    docker container run -ti --mount type=volume, src=giropops,dst=/giropops debian
+    docker container create -v /opt/giropops:/data --name dbdados centos
+
+
+Apagar coisas fora de execução:
+    docker volume prune
+    docker container prune
+    docker images prune
+
+
+
+Criar container 
+    docker container run -d -p 5433:5432 --name pgsql1 --volumes-from dbdados -e POSTGRESQUL_USER=docker -e POSTGRESQL_PASS=docker -e ṔOSTGRESQL_DB=docker kamui/postgresql
+    docker container run -d -p 5433:5432 --name pgsql2 --volumes-from dbdados -e POSTGRESQUL_USER=docker -e POSTGRESQL_PASS=docker -e ṔOSTGRESQL_DB=docker kamui/postgresql
+
+
+Desafio:
+    docker volume create dbdados
+    docker container run -d -p 5432:5432 --name pgsql1 --mount type=volume, src=dbdados,dst=/data -e POSTGRESQUL_USER=docker -e POSTGRESQL_PASS=docker -e ṔOSTGRESQL_DB=docker kamui/postgresql
+    docker container run -d -p 5433:5432 --name pgsql2 --mount type=volume, src=dbdados,dst=/data -e POSTGRESQUL_USER=docker -e POSTGRESQL_PASS=docker -e ṔOSTGRESQL_DB=docker kamui/postgresql
+
+
+Backup:
+    mkdir /opt/backup
+    docker container run -ti --mount type,src=dbdados,dst=/data --mount type=bind,src=/opt/backup,dst=/backup debian tar -cvf /backup/bkp-banco.tar /data
+
+
+Remover container executando:
+    todos:
+    docker container rm -f $(docker ps -q)
+    todos:
+    docker container rm -f nomedocontainer
+
+Golang:
+    docker image build -t meugo:1.0 .
+    docker image build -t meugo:2.0 .
+
+    docker container run -ti meugo:1.0
+
+
+
+
+Container em imagem:
+    docker commit -m "ubuntu com vim e curl" id
+    docker image tag id ubuntu_vim_curl:1.0
+
+
+Dockerhub:
+    docker image tag id usuario/nome_da_imagem:versao
+
+    docker login
+
+    docker push linuxtips/meu_apache:1.0
+    docker pull linuxtips/meu_apache:1.0
+
+
+Docker Registry (local)
+    docker container run -d -p 5000:5000 --restart=aways --name registry restry:2
+
+    docker image tag id localhost:5000/meu_apache:1.0
+
+    docker container run -d localhost:5000/1.0.0
+
+
+    curl localhost:5000/v2/_catalog
+    curl localhost:5000/v2/meu_apache/tags/list
+
+
+Docker Swarm:
+    docker swarm --help
+    docker swarm init
+        docker swarm join --token XXXXXXXX
+            Entrar nas maquinas secundarias após o provisionamento e colocar isto.
+    mais de uma interface de rede:
+        docker swarm init --advertise-addr 192.168.0.1
+    
+    docker node ls
+    docker promote nome_da_maquina
+    docker demote nome_da_maquina
+
+    docker swarm leave (sair do swarm na maquina)
+    docker swarm leave -f
+
+    docker swarm join-token worker
+    docker swarm join-token manager
+
+    docker swarm join-token rotate worker (muda o token)
+
+
+Service:    
+    docker service create --name webserver --replicas 3 -p 8080:80 nginx
+        docker service create --name webserver --replicas 3 -p 8080:80 --mount type=volume,src=httpd,dst=/usr/share/nginx/html/ nginx
+
+        docker service create --name webserver --replicas 3 -p 8080:80 --network vlan1 nginx
+
+
+    docker service ps webserver 
+    docker service ls
+    docker node inspect hostname
+    docker node inspect hostname --pretty
+    docker service scale webserver=10
+    docker service logs -f webserver
+    docker service update --publish-add
+    docker service update --network-add strigus nginx1
+    
+
+    docker node update 
+    docker node update --availability pause hostname
+    docker node update --availability active hostname
+    docker node update --availability drain hostname (sem containers)
+
+
+    
+    remover o serviço:
+        docker service rm webserver
+
+
+
+
+
+Network:
+    docker network create -d overlay vlan1
+    docker rm vlan1
+
+
+Secrets
+    echo -n "passwd" | docker secret create nome -
+    docker secret ls
+    docker secret inspect nome
+    docker secret rm nome
+        
+        em arquivos:
+        teste.txt
+        docker secret create nome-secret teste.txt
+
+
+        Passando o secret para o Container:
+
+            docker service create --name webserver --replicas 3 -p 8080:80 --secret nome-secret nginx
+            docker service update --secret-add nome-secret
+            docker service update --secret-rm nome-secret
+            docker service create --name webserver --replicas 3 -p 8080:80 --secret src=nome-secret,target=meu-secret,uid=200,gid=200,mod=0400 nginx
+            
+
+        dentro do container pwd do secret
+            /run/secret/
+
+Compose:
+    docker stack deploy -c docker-compose.yml nome-da-stack
+    docker stack rm nome-da-stack
+    
+Stack:
+
+    docker stack ls
+    docker stack ps nome-da-stack
+    docker node update --label-add dc=UK docker(nome do nó)
+    docker stack deploy -c docker-compose.yml votevote
+
+
+    docker exec -it gb6wmx5ej9aw bash vi/var/lib/postgresql/data/pg_hba.conf
+
+
